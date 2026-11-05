@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: jewel
+      POSTGRES_PASSWORD: jewel # local demo credentials only
+      POSTGRES_DB: jewellery
+    ports:
+      - "5433:5432" # exposed so `npm test` can run from the host
+    volumes:
+      - ./server/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jewel -d jewellery"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://jewel:jewel@db:5432/jewellery
+      TEST_DATABASE_URL: postgres://jewel:jewel@db:5432/jewellery_test
+      LOCK_SECONDS: ${LOCK_SECONDS:-600}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
